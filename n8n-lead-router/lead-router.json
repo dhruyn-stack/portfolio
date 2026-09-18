@@ -1,0 +1,63 @@
+{
+  "name": "Lead Router — form → qualify → sheet → notify",
+  "nodes": [
+    {
+      "parameters": {"httpMethod": "POST", "path": "new-lead", "responseMode": "onReceived", "options": {}},
+      "id": "1", "name": "Webhook (form submit)", "type": "n8n-nodes-base.webhook", "typeVersion": 2, "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {"assignments": [
+          {"id": "a1", "name": "email", "value": "={{ ($json.body.email || '').toLowerCase().trim() }}", "type": "string"},
+          {"id": "a2", "name": "name", "value": "={{ $json.body.name || 'Unknown' }}", "type": "string"},
+          {"id": "a3", "name": "budget", "value": "={{ Number($json.body.budget) || 0 }}", "type": "number"},
+          {"id": "a4", "name": "message", "value": "={{ $json.body.message || '' }}", "type": "string"},
+          {"id": "a5", "name": "received_at", "value": "={{ $now.toISO() }}", "type": "string"},
+          {"id": "a6", "name": "tier", "value": "={{ Number($json.body.budget) >= 1000 ? 'A' : Number($json.body.budget) >= 250 ? 'B' : 'C' }}", "type": "string"}
+        ]}, "options": {}
+      },
+      "id": "2", "name": "Normalise fields", "type": "n8n-nodes-base.set", "typeVersion": 3.4, "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {"options": {"caseSensitive": false, "typeValidation": "loose"}, "combinator": "and", "conditions": [
+          {"id": "c1", "leftValue": "={{ $json.email }}", "rightValue": "@", "operator": {"type": "string", "operation": "contains"}},
+          {"id": "c2", "leftValue": "={{ $json.budget }}", "rightValue": 0, "operator": {"type": "number", "operation": "gt"}}
+        ]}, "options": {}
+      },
+      "id": "3", "name": "Qualified?", "type": "n8n-nodes-base.if", "typeVersion": 2, "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "append", "documentId": {"__rl": true, "mode": "list", "value": "REPLACE_WITH_SHEET_ID"},
+        "sheetName": {"__rl": true, "mode": "list", "value": "Leads"},
+        "columns": {"mappingMode": "autoMapInputData", "value": {}}, "options": {}
+      },
+      "id": "4", "name": "Append to Google Sheet", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [680, -100]
+    },
+    {
+      "parameters": {
+        "sendTo": "sales@example.com",
+        "subject": "=New {{ $json.tier }}-tier lead: {{ $json.name }} (${{ $json.budget }})",
+        "message": "=Name: {{ $json.name }}\nEmail: {{ $json.email }}\nBudget: {{ $json.budget }}\nTier: {{ $json.tier }}\n\n{{ $json.message }}",
+        "options": {}
+      },
+      "id": "5", "name": "Notify sales (Gmail)", "type": "n8n-nodes-base.gmail", "typeVersion": 2.1, "position": [900, -100]
+    },
+    {
+      "parameters": {
+        "operation": "append", "documentId": {"__rl": true, "mode": "list", "value": "REPLACE_WITH_SHEET_ID"},
+        "sheetName": {"__rl": true, "mode": "list", "value": "Rejected"},
+        "columns": {"mappingMode": "autoMapInputData", "value": {}}, "options": {}
+      },
+      "id": "6", "name": "Log rejected", "type": "n8n-nodes-base.googleSheets", "typeVersion": 4.5, "position": [680, 120]
+    }
+  ],
+  "connections": {
+    "Webhook (form submit)": {"main": [[{"node": "Normalise fields", "type": "main", "index": 0}]]},
+    "Normalise fields": {"main": [[{"node": "Qualified?", "type": "main", "index": 0}]]},
+    "Qualified?": {"main": [[{"node": "Append to Google Sheet", "type": "main", "index": 0}], [{"node": "Log rejected", "type": "main", "index": 0}]]},
+    "Append to Google Sheet": {"main": [[{"node": "Notify sales (Gmail)", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"}
+}
