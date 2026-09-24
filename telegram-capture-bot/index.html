@@ -4,268 +4,283 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pocket Capture Pipeline</title>
+<meta name="description" content="A Telegram bot, Google Apps Script, GitHub, Obsidian and Claude: one line from my phone becomes a filed, checked study note. Real footage.">
+<meta property="og:title" content="Pocket Capture Pipeline">
+<meta property="og:description" content="From one line on Telegram to a filed, checked note. Real footage of a pipeline I built and use.">
+<meta property="og:image" content="https://dhruyn-stack.github.io/portfolio/telegram-capture-bot/still-title.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700;800;900&family=Caveat:wght@600;700&display=swap">
 <style>
 :root{
-  --ground:#F4F7F6; --surface:#FFFFFF; --sunk:#E8EEEC; --line:#D3DDDA;
-  --ink:#14201C; --muted:#5A6B65; --accent:#0E7C66; --accent-soft:#D6EDE7; --warn:#B25E09; --warn-soft:#FBEBD8;
-  --msg:#E3F1EC; --shadow:0 1px 2px rgba(20,32,28,.06),0 8px 24px rgba(20,32,28,.06);
-  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
-  --body:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
-  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    color-scheme:dark;
-    --ground:#0E1513; --surface:#15201C; --sunk:#1B2824; --line:#2A3A35;
-    --ink:#E4EEEA; --muted:#94A8A1; --accent:#3CC4A2; --accent-soft:#16392F; --warn:#F0A04B; --warn-soft:#3A2A16;
-    --msg:#1C3A31; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
-  }
-}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --ground:#0E1513; --surface:#15201C; --sunk:#1B2824; --line:#2A3A35;
-  --ink:#E4EEEA; --muted:#94A8A1; --accent:#3CC4A2; --accent-soft:#16392F; --warn:#F0A04B; --warn-soft:#3A2A16;
-  --msg:#1C3A31; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  color-scheme:light;
+  --paper:#FFFFFF; --ink:#121212; --grey:#6B6464; --line:#EFE5E5;
+  --red:#D62839; --red-deep:#A81E2D; --blush:#FDECEE;
+  --sans:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
+  --hand:"Caveat","Segoe Print","Comic Sans MS",cursive;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
 }
 *{box-sizing:border-box}
-body{background:var(--ground);color:var(--ink);font:17px/1.6 var(--body);padding-inline:clamp(16px,4vw,48px);padding-block:40px 64px}
-.wrap{max-width:1120px;margin:0 auto;display:grid;gap:72px}
-h1,h2,h3{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0}
-h1{font-size:clamp(34px,5vw,56px);font-weight:700;letter-spacing:-.02em}
-h2{font-size:clamp(26px,3vw,34px);font-weight:700}
-h3{font-size:19px;font-weight:700}
-p{margin:0;max-width:65ch}
-.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
-.lede{font-size:19px;color:var(--muted)}
-.mono{font-family:var(--mono);font-size:13px}
-code{font-family:var(--mono);font-size:.85em;background:var(--sunk);padding:1px 6px;border-radius:4px}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:18px/1.6 var(--sans);padding-inline:clamp(16px,4vw,56px);padding-block:0 96px}
+.wrap{max-width:1160px;margin:0 auto;display:grid;gap:96px}
+h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.02em}
+h1{font-weight:900;font-size:clamp(40px,6.2vw,76px);line-height:1.02}
+h2{font-weight:800;font-size:clamp(30px,3.6vw,44px);line-height:1.08}
+h3{font-weight:800;font-size:22px;line-height:1.2}
+p{margin:0;max-width:62ch}
+a{color:var(--red)}
+.hand{font-family:var(--hand);font-weight:700;color:var(--red);font-size:26px;line-height:1.1}
+.tag{display:inline-flex;align-items:center;gap:8px;font:800 12px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:#fff;background:var(--red);padding:9px 12px;border-radius:999px;width:max-content}
+.tag.dark{background:var(--ink)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-top:6px solid var(--red);margin-inline:calc(-1*clamp(16px,4vw,56px));padding:14px clamp(16px,4vw,56px);display:flex;justify-content:space-between;align-items:center;gap:12px}
+.bar b{font-weight:800}
+.bar span{color:var(--grey);font-size:15px}
 
 /* hero */
-.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;align-items:start}
-.hero-copy{display:grid;gap:18px;padding-top:12px}
-.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-.fact{font:600 13px/1 var(--mono);padding:8px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--surface)}
-.stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px;display:grid;gap:14px}
-.stage-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.controls{display:flex;gap:8px}
-button{font:600 14px/1 var(--body);color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer}
-button:hover{border-color:var(--accent)}
-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
-.lanes{display:grid;gap:10px}
-.lane{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:start;padding:12px;border-radius:12px;border:1px solid transparent;transition:background .35s,border-color .35s,opacity .35s;opacity:.5}
-.lane.on{opacity:1;background:var(--accent-soft);border-color:var(--accent)}
-.lane.done{opacity:.9}
-.lane-name{font:600 12px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
-.lane.on .lane-name{color:var(--accent)}
-.bubble{background:var(--msg);border-radius:14px 14px 14px 4px;padding:9px 12px;display:inline-block;max-width:100%}
-.bubble.bot{border-radius:14px 14px 4px 14px;background:var(--sunk)}
-.chat{display:grid;gap:6px}
-.chat .right{justify-self:end}
-.file{font:13px/1.55 var(--mono);background:var(--sunk);border-radius:8px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
-.ok{color:var(--accent);font-weight:600}
-.out{display:grid;gap:8px}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{font:600 12px/1 var(--mono);padding:6px 8px;border-radius:6px;background:var(--sunk);border:1px solid var(--line)}
-.chip.link{color:var(--accent);border-color:var(--accent)}
-.chip.flag{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
-.caption{font-size:14px;color:var(--muted)}
+.hero{display:grid;grid-template-columns:minmax(0,11fr) minmax(0,10fr);gap:48px;align-items:center;padding-top:40px}
+.hero-copy{display:grid;gap:22px}
+.u{position:relative;white-space:nowrap}
+.u svg{position:absolute;left:-2%;bottom:-.16em;width:104%;height:.3em;overflow:visible}
+.u path{fill:none;stroke:var(--red);stroke-width:9;stroke-linecap:round;stroke-dasharray:420;stroke-dashoffset:0;animation:draw 1s .5s cubic-bezier(.2,.7,.2,1) both}
+@keyframes draw{from{stroke-dashoffset:420}to{stroke-dashoffset:0}}
+.lede{font-size:20px;color:var(--grey)}
+.facts{display:flex;flex-wrap:wrap;gap:10px}
+.fact{font-weight:700;font-size:15px;padding:10px 14px;border:2px solid var(--ink);border-radius:12px;background:var(--paper)}
+.fact b{color:var(--red)}
+.proof{position:relative;display:grid;gap:12px;justify-items:start}
+.screen{width:100%;border-radius:16px;overflow:hidden;background:#0E1621;box-shadow:0 2px 0 var(--red),0 24px 48px -18px rgba(168,30,45,.45);transform:rotate(-1.2deg);transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+.screen:hover{transform:rotate(0deg) scale(1.01)}
+.screen video,.screen img{display:block;width:100%;height:auto}
+.proof .hand{transform:rotate(-2deg);margin-left:8px}
+
+/* full video */
+.film{display:grid;gap:20px}
+.film-head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap}
+.film video{width:100%;max-width:100%;border-radius:18px;border:2px solid var(--ink);background:#fff;display:block}
 
 /* steps */
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;counter-reset:s}
-.step{display:grid;gap:8px;align-content:start;padding-top:14px;border-top:2px solid var(--line)}
-.step::before{counter-increment:s;content:"Step " counter(s);font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.step p{font-size:16px;color:var(--muted)}
+.steps{display:grid;gap:22px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px;counter-reset:n}
+.step{border:2px solid var(--line);border-radius:20px;padding:22px;display:grid;gap:14px;align-content:start;background:var(--paper);transition:border-color .25s,transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s}
+.step:hover{border-color:var(--red);transform:translateY(-4px);box-shadow:0 18px 40px -24px rgba(168,30,45,.5)}
+.step-top{display:flex;align-items:center;gap:12px}
+.num{counter-increment:n;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:var(--red);color:#fff;font-weight:900;font-size:18px;flex:none}
+.num::before{content:counter(n)}
+.step p{font-size:17px;color:var(--grey)}
+.shot{border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#fafafa}
+.shot img{display:block;width:100%;height:auto}
+.shot.tall{max-height:360px;overflow:auto}
+.step .hand{font-size:24px}
 
-/* guardrails */
-.guard{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:40px;align-items:start}
-.rules{display:grid;gap:0;background:var(--warn-soft);border:1px solid var(--warn);border-radius:14px;overflow:hidden}
-.rule{display:grid;gap:4px;padding:16px 18px;border-top:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
-.rule:first-child{border-top:0}
-.rule strong{font-family:var(--display);font-size:17px}
-.rule span{font-size:15px;color:var(--muted)}
+/* relay diagram */
+.relay{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:8px;padding:18px 6px;position:relative}
+.node{border:2px solid var(--red);border-radius:14px;padding:12px 8px;text-align:center;font-weight:800;font-size:15px;line-height:1.25;background:var(--paper)}
+.node small{display:block;font-weight:500;color:var(--grey);font-size:12.5px;margin-top:4px}
+.link{width:34px;height:2px;background:var(--ink);position:relative}
+.link::after{content:"";position:absolute;right:-2px;top:-5px;border:6px solid transparent;border-left:8px solid var(--ink)}
+.dot{position:absolute;top:50%;left:8%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 6px rgba(214,40,57,.18);animation:travel 3.2s cubic-bezier(.6,0,.4,1) infinite}
+@keyframes travel{0%{left:8%}45%{left:48%}90%,100%{left:88%}}
 
-/* stack + adapt */
-.split{display:grid;grid-template-columns:1fr 1fr;gap:40px}
-.stack{display:grid;gap:10px}
-.row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line);font-size:16px}
-.row b{font-family:var(--mono);font-size:13px;font-weight:600;padding-top:3px}
-.uses{display:grid;gap:12px}
-.use{padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
-.use h3{font-size:17px;margin-bottom:4px}
-.use p{font-size:15px;color:var(--muted)}
-footer{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px;display:grid;gap:6px}
-@media (max-width:860px){
-  .hero,.guard,.split{grid-template-columns:1fr}
-  .lane{grid-template-columns:1fr;gap:6px}
+/* rules */
+.rules{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:48px;align-items:start}
+.rule-list{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.rule-list li{display:flex;gap:16px;align-items:center;background:var(--blush);border-radius:16px;padding:16px 18px;font-weight:700;font-size:19px}
+.tick{flex:none;width:34px;height:34px}
+.tick path{fill:none;stroke:var(--red);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+
+/* uses */
+.uses{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.use{border-top:6px solid var(--red);padding-top:16px;display:grid;gap:8px}
+.use p{font-size:17px;color:var(--grey)}
+footer{border-top:2px solid var(--line);padding-top:22px;display:grid;gap:6px;color:var(--grey);font-size:15px}
+
+/* how-it-was-built bubble */
+.fab{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:20;display:flex;align-items:center;gap:10px;border:0;border-radius:999px;padding:12px 18px 12px 12px;background:var(--red);color:#fff;font:800 16px/1 var(--sans);cursor:pointer;box-shadow:0 12px 30px -10px rgba(168,30,45,.7)}
+.fab:hover{background:var(--red-deep)}
+.fab:focus-visible,.panel button:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.fab .ico{width:34px;height:34px;border-radius:50%;background:#fff;color:var(--red);display:grid;place-items:center;font:900 18px/1 var(--sans);position:relative}
+.fab .ico::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid #fff;opacity:.7;animation:ping 2.2s ease-out infinite}
+@keyframes ping{0%{transform:scale(.8);opacity:.8}80%,100%{transform:scale(1.5);opacity:0}}
+.panel{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:21;width:min(420px,calc(100vw - 32px));max-height:min(72vh,640px);overflow:auto;background:var(--paper);border:2px solid var(--ink);border-radius:22px;box-shadow:0 30px 60px -20px rgba(18,18,18,.35);padding:18px;display:grid;gap:12px;transform-origin:bottom right;animation:pop .28s cubic-bezier(.2,.7,.2,1)}
+@keyframes pop{from{transform:translateY(12px) scale(.96)}to{transform:none}}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.panel-head h3{font-size:20px}
+.panel-head button{border:0;background:var(--blush);color:var(--red-deep);font:800 14px/1 var(--sans);border-radius:10px;padding:9px 12px;cursor:pointer}
+.msg{max-width:88%;padding:10px 14px;border-radius:16px;font-size:15.5px;line-height:1.45}
+.msg.q{justify-self:end;background:var(--ink);color:#fff;border-bottom-right-radius:4px;font-weight:700}
+.msg.a{justify-self:start;background:var(--blush);border-bottom-left-radius:4px}
+
+@media (max-width:900px){
+  .hero,.rules{grid-template-columns:1fr}
+  .grid,.uses{grid-template-columns:1fr}
+  .screen{transform:none}
+  .fab .label{display:none}
+  .fab{padding:12px}
 }
-@media (prefers-reduced-motion:reduce){.lane{transition:none}}
+@media (max-width:520px){
+  .relay{grid-template-columns:1fr;gap:10px}
+  .link{width:2px;height:22px;justify-self:center}
+  .link::after{right:-5px;top:auto;bottom:-10px;border:6px solid transparent;border-top:8px solid var(--ink)}
+  .dot{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+}
 </style>
 </head>
 <body>
+<header class="bar">
+  <b>Dhruvin P.</b>
+  <span>Automation portfolio</span>
+</header>
 
-<div class="wrap">
+<main class="wrap">
   <section class="hero">
     <div class="hero-copy">
-      <span class="eyebrow">Personal project · my own study workflow</span>
-      <h1>A thought on the ward, a filed note by evening.</h1>
-      <p class="lede">A Telegram bot catches a one-line note from my phone. Google Apps Script commits it to GitHub, my Obsidian vault pulls it, and Claude links it to the right study notes, without inventing a single fact.</p>
+      <span class="tag">Personal project · real footage</span>
+      <h1>From <span class="u">one line<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path d="M2 14 C 50 4, 120 4, 198 11"/></svg></span> on Telegram to a filed, checked note.</h1>
+      <p class="lede">I built this for my medical studies. A Telegram bot takes one line from my phone, Google Apps Script saves it to GitHub, it syncs into my Obsidian vault, and Claude files it under written rules, without inventing a single fact.</p>
       <div class="facts">
-        <span class="fact">3 free services</span>
-        <span class="fact">0 servers to run</span>
-        <span class="fact">$0 / month</span>
+        <span class="fact">Bot replied in <b>2 s</b></span>
+        <span class="fact"><b>0</b> servers</span>
+        <span class="fact"><b>$0</b> / month</span>
       </div>
     </div>
+    <figure class="proof" style="margin:0">
+      <div class="screen">
+        <video autoplay muted loop playsinline preload="auto" poster="assets/telegram-final.png" aria-label="Screen recording: a note typed to the Telegram bot and its confirmation">
+          <source src="telegram-real.mp4" type="video/mp4">
+        </video>
+      </div>
+      <figcaption class="hand">↑ my real screen recording (typing sped up 2.5×)</figcaption>
+    </figure>
+  </section>
 
-    <div class="stage" aria-label="Animated walkthrough of one note moving through the pipeline">
-      <div class="stage-top">
-        <span class="mono caption" id="stepLabel">Step 1 of 5 · Capture</span>
-        <div class="controls">
-          <button id="prev" type="button" aria-label="Previous step">←</button>
-          <button id="play" type="button" class="primary">Pause</button>
-          <button id="next" type="button" aria-label="Next step">→</button>
-        </div>
+  <section class="film" id="watch">
+    <div class="film-head">
+      <div style="display:grid;gap:10px">
+        <span class="tag dark">Watch · 54 seconds</span>
+        <h2>The whole flow, from phone to filed note</h2>
       </div>
-      <div class="lanes">
-        <div class="lane on" data-i="0">
-          <div class="lane-name">Telegram</div>
-          <div class="chat">
-            <span class="bubble right">OP poisoning: atropine vs pralidoxime, which one fixes the weakness?</span>
-            <span class="bubble bot">✅ Note dropped into your Obsidian inbox.</span>
-          </div>
+      <span class="hand">three of the four steps are real footage</span>
+    </div>
+    <video controls preload="metadata" poster="still-title.png">
+      <source src="capture-pipeline.mp4" type="video/mp4">
+    </video>
+  </section>
+
+  <section class="steps">
+    <div style="display:grid;gap:10px">
+      <span class="tag">How it works</span>
+      <h2>Four steps, and what each one really looks like</h2>
+    </div>
+    <div class="grid">
+      <article class="step">
+        <div class="step-top"><span class="num" aria-hidden="true"></span><h3>Capture on Telegram</h3></div>
+        <div class="shot"><img src="assets/telegram-final.png" alt="Telegram chat: the note 'Saw a patient of op poisoning, the physician gave atropine sulphate' and the bot's reply 'Note dropped into your Obsidian Inbox!'" loading="lazy"></div>
+        <p>One line, typed wherever I am. The bot confirms within seconds, so I know the note is safe before I pocket the phone.</p>
+        <span class="hand">real chat, 24 Sep, 13:21</span>
+      </article>
+      <article class="step">
+        <div class="step-top"><span class="num" aria-hidden="true"></span><h3>Relay through Apps Script</h3></div>
+        <div class="relay" aria-label="Telegram bot sends to Google Apps Script, which saves to GitHub">
+          <div class="node">Telegram bot<small>webhook</small></div>
+          <span class="link" aria-hidden="true"></span>
+          <div class="node">Apps Script<small>doPost(e) + timestamp</small></div>
+          <span class="link" aria-hidden="true"></span>
+          <div class="node">GitHub<small>commit to 01_INBOX</small></div>
+          <span class="dot" aria-hidden="true"></span>
         </div>
-        <div class="lane" data-i="1">
-          <div class="lane-name">Apps Script</div>
-          <div class="file">doPost(e) → text, timestamp
-→ PUT /repos/…/contents/01_INBOX/Raw_Note_20260924_132147.md
-<span class="ok">201 Created</span></div>
-        </div>
-        <div class="lane" data-i="2">
-          <div class="lane-name">GitHub</div>
-          <div class="file">commit a41f9c2  "capture: Raw_Note_20260924_132147"
-01_INBOX/Raw_Note_20260924_132147.md  +3 lines</div>
-        </div>
-        <div class="lane" data-i="3">
-          <div class="lane-name">Obsidian</div>
-          <div class="file">$ git pull
-<span class="ok">✓</span> 01_INBOX/Raw_Note_20260924_132147.md
----
-captured: 2026-09-24 13:21:47
-source: telegram
----
-OP poisoning: atropine vs pralidoxime, which one fixes the weakness?</div>
-        </div>
-        <div class="lane" data-i="4">
-          <div class="lane-name">Claude</div>
-          <div class="out">
-            <span class="bubble right">check my bot inbox</span>
-            <div class="bubble bot">1 new capture: <b>OP poisoning</b>. It sits across two subjects, so I linked it rather than rewriting it:
-              <div class="chips" style="margin-top:8px">
-                <span class="chip link">→ Forensic Medicine / Poisons</span>
-                <span class="chip link">→ Medicine / Toxicology</span>
-                <span class="chip flag">UNVERIFIED capture</span>
-              </div>
-              <div style="margin-top:8px">Revise it now, queue it for spaced revision, or park it?</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <p class="caption">Sample note for illustration; the real inbox holds study notes only, never patient details.</p>
+        <p>A Google Apps Script web app receives the message, adds a timestamp and saves it to a private GitHub repo. Every note is a commit, so nothing gets lost.</p>
+        <span class="hand">backend, so this one is drawn</span>
+      </article>
+      <article class="step">
+        <div class="step-top"><span class="num" aria-hidden="true"></span><h3>Land in Obsidian</h3></div>
+        <div class="shot"><img src="assets/obsidian-note.png" alt="Obsidian: note Raw_Note_20260924_132147 in 01_INBOX containing the captured sentence" loading="lazy"></div>
+        <p>My Obsidian vault is a clone of that repo. The note arrives as <code>Raw_Note_20260924_132147</code>, with my exact words.</p>
+        <span class="hand">nothing added, nothing lost</span>
+      </article>
+      <article class="step">
+        <div class="step-top"><span class="num" aria-hidden="true"></span><h3>Triage with Claude</h3></div>
+        <div class="shot tall" tabindex="0" aria-label="Scrollable screenshot"><img src="assets/claude-triage.png" alt="Claude reporting 3 new captures and one junk item, ignoring a /start command, leaving a too-thin capture in the inbox rather than inventing a note, and offering three options" loading="lazy"></div>
+        <p>When I ask it to check the inbox, Claude reports 3 captures and ignores the junk. It leaves the one that's too thin for me instead of inventing a note, then offers the next step.</p>
+        <span class="hand">it knows when to stop</span>
+      </article>
     </div>
   </section>
 
-
-  <section style="display:grid;gap:16px">
-    <div style="display:grid;gap:10px">
-      <span class="eyebrow">Watch</span>
-      <h2>The whole flow in 40 seconds</h2>
+  <section class="rules">
+    <div style="display:grid;gap:14px">
+      <span class="tag">Guardrails</span>
+      <h2>Automation that refuses to make things up</h2>
+      <p style="color:var(--grey)">A fast capture is worthless if the machine embroiders it. These rules live in the vault's instruction file, and Claude follows them on every run.</p>
     </div>
-    <video controls preload="metadata" poster="poster.png" style="width:100%;max-width:100%;border-radius:14px;border:1px solid var(--line);background:#0E1513">
-      <source src="pipeline.mp4" type="video/mp4">
-    </video>
+    <ul class="rule-list">
+      <li><svg class="tick" viewBox="0 0 34 34" aria-hidden="true"><path d="M6 18 L14 26 L29 8"/></svg>Never invents facts. A one-line capture is linked, not padded out.</li>
+      <li><svg class="tick" viewBox="0 0 34 34" aria-hidden="true"><path d="M6 18 L14 26 L29 8"/></svg>Skips junk like <code>/start</code> and duplicates</li>
+      <li><svg class="tick" viewBox="0 0 34 34" aria-hidden="true"><path d="M6 18 L14 26 L29 8"/></svg>Thin notes wait for a human</li>
+      <li><svg class="tick" viewBox="0 0 34 34" aria-hidden="true"><path d="M6 18 L14 26 L29 8"/></svg>No patient identifiers, ever</li>
+    </ul>
   </section>
 
   <section style="display:grid;gap:28px">
     <div style="display:grid;gap:10px">
-      <span class="eyebrow">How it works</span>
-      <h2>Five small pieces, no server</h2>
+      <span class="tag dark">For your business</span>
+      <h2>The same pattern, pointed at your work</h2>
     </div>
-    <div class="steps">
-      <div class="step"><h3>Capture</h3><p>A private Telegram bot accepts any text I send. It replies instantly, so I know the note is safe before I pocket the phone.</p></div>
-      <div class="step"><h3>Relay</h3><p>Telegram's webhook calls a Google Apps Script web app. It timestamps the text and writes it as a Markdown file through the GitHub API.</p></div>
-      <div class="step"><h3>Store</h3><p>Every capture is a commit in a private repo, so nothing is lost and every change has history.</p></div>
-      <div class="step"><h3>Sync</h3><p>The Obsidian vault on my PC is the same repo. A <code>git pull</code> brings the raw notes into <code>01_INBOX</code>.</p></div>
-      <div class="step"><h3>Process</h3><p>On <em>"check my bot inbox"</em>, Claude reads the new captures under the vault's written rules, links each one to its related notes, and offers the next study step.</p></div>
-    </div>
-  </section>
-
-  <section class="guard">
-    <div style="display:grid;gap:12px">
-      <span class="eyebrow">Guardrails</span>
-      <h2>Automation that refuses to make things up</h2>
-      <p class="lede">A fast capture is useless if the machine embroiders it. These rules live in the vault's instruction file, and the processing follows them every time.</p>
-    </div>
-    <div class="rules">
-      <div class="rule"><strong>No invented facts</strong><span>A one-line capture stays one line. It is linked to the right notes, never expanded into a "complete" note it doesn't support.</span></div>
-      <div class="rule"><strong>Junk stays put</strong><span>Greetings, <code>/start</code>, and truncated or duplicate captures are skipped and left in the inbox, not turned into notes.</span></div>
-      <div class="rule"><strong>Delete only after it's safe</strong><span>A raw file is removed only once it is faithfully represented somewhere else.</span></div>
-      <div class="rule"><strong>Marked as unverified</strong><span>Captures sit in their own <em>UNVERIFIED</em> file and are never turned into flashcards.</span></div>
-      <div class="rule"><strong>No identifiers</strong><span>Study notes only. Anything that could identify a person is scrubbed.</span></div>
-    </div>
-  </section>
-
-  <section class="split">
-    <div style="display:grid;gap:16px;align-content:start">
-      <span class="eyebrow">Built with</span>
-      <div class="stack">
-        <div class="row"><b>Telegram Bot API</b><span>capture and instant reply, via webhook</span></div>
-        <div class="row"><b>Google Apps Script</b><span>serverless relay: doPost handler, timestamps, GitHub commit</span></div>
-        <div class="row"><b>GitHub REST API</b><span>contents endpoint; every note is a commit</span></div>
-        <div class="row"><b>Git + Obsidian</b><span>vault = repo; pull on demand or on a Windows schedule</span></div>
-        <div class="row"><b>Claude</b><span>linking and triage under a written rule file</span></div>
-      </div>
-    </div>
-    <div style="display:grid;gap:16px;align-content:start">
-      <span class="eyebrow">The same pattern for your business</span>
-      <div class="uses">
-        <div class="use"><h3>Field teams</h3><p>Inspectors or technicians text a finding; it lands as a dated record in a shared sheet or repo, with photos to follow.</p></div>
-        <div class="use"><h3>Sales calls</h3><p>A one-line note after each call becomes a CRM update, tagged to the right deal.</p></div>
-        <div class="use"><h3>Clinics and offices</h3><p>Staff log supply shortages or maintenance issues from their phones; a daily summary goes to the manager.</p></div>
-      </div>
+    <div class="uses">
+      <div class="use"><h3>Field teams</h3><p>Inspectors text a finding from site, and it lands as a dated record in a shared sheet.</p></div>
+      <div class="use"><h3>Sales calls</h3><p>One line after each call becomes a CRM update on the right deal.</p></div>
+      <div class="use"><h3>Clinics and offices</h3><p>Staff log a shortage or a broken machine from their phone, and the manager gets a daily summary.</p></div>
     </div>
   </section>
 
   <footer>
-    <span>Personal project by Dhruvin P. · final-year medical student who builds automations · Gujarat, India</span>
-    <span>The note shown is a sample. The pipeline runs on free tiers of Telegram, Google Apps Script and GitHub.</span>
+    <span>Built by Dhruvin P., a final-year medical student who builds automations · Gujarat, India</span>
+    <span>This page and its video were made with AI help, from my real screenshots and screen recording. Runs on free tiers of Telegram, Google Apps Script and GitHub.</span>
   </footer>
-</div>
+</main>
+
+<button class="fab" id="fab" type="button" aria-expanded="false" aria-controls="how">
+  <span class="ico" aria-hidden="true">?</span><span class="label">How was this built?</span>
+</button>
+<aside class="panel" id="how" role="dialog" aria-label="How this was built" hidden>
+  <div class="panel-head">
+    <h3>How I built it</h3>
+    <button type="button" id="closeHow">Close</button>
+  </div>
+  <div class="msg q">How does the phone part work?</div>
+  <div class="msg a">A private Telegram bot (made with BotFather) sends each message to a webhook: a Google Apps Script web app.</div>
+  <div class="msg q">What does the script do?</div>
+  <div class="msg a"><code>doPost(e)</code> reads the text, adds a timestamp, and writes <code>01_INBOX/Raw_Note_&lt;time&gt;.md</code> to a private GitHub repo through the GitHub API. The bot replies ✅ so I know it's saved.</div>
+  <div class="msg q">How does it reach Obsidian?</div>
+  <div class="msg a">The vault is a clone of that repo, so a <code>git pull</code> brings every new note in.</div>
+  <div class="msg q">Where does Claude come in?</div>
+  <div class="msg a">When I ask it to check the inbox, it follows a rules file in the vault: link notes instead of rewriting them, skip junk, leave thin notes for me, never add facts.</div>
+  <div class="msg q">What does it cost?</div>
+  <div class="msg a">Nothing. It runs on the free tiers of Telegram, Google Apps Script and GitHub.</div>
+  <div class="msg q">Who made this page?</div>
+  <div class="msg a">Me, with AI help, from my real screenshots and screen recording. The video was rendered in Python.</div>
+</aside>
 
 <script>
 (() => {
-  const lanes = [...document.querySelectorAll(".lane")];
-  const names = ["Capture", "Relay", "Store", "Sync", "Process"];
-  const label = document.getElementById("stepLabel");
-  const playBtn = document.getElementById("play");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let i = 0, timer = null;
-  function show(n) {
-    i = (n + lanes.length) % lanes.length;
-    lanes.forEach((l, k) => { l.classList.toggle("on", k === i); l.classList.toggle("done", k < i); });
-    label.textContent = `Step ${i + 1} of ${lanes.length} · ${names[i]}`;
+  const fab = document.getElementById("fab"), panel = document.getElementById("how"), close = document.getElementById("closeHow");
+  function setOpen(open) {
+    panel.hidden = !open;
+    fab.setAttribute("aria-expanded", String(open));
+    if (open) close.focus(); else fab.focus();
   }
-  function play() { stop(); timer = setInterval(() => show(i + 1), 2600); playBtn.textContent = "Pause"; }
-  function stop() { clearInterval(timer); timer = null; playBtn.textContent = "Play"; }
-  playBtn.addEventListener("click", () => (timer ? stop() : play()));
-  document.getElementById("next").addEventListener("click", () => { stop(); show(i + 1); });
-  document.getElementById("prev").addEventListener("click", () => { stop(); show(i - 1); });
-  show(0);
-  if (reduce) stop(); else play();
+  fab.addEventListener("click", () => setOpen(panel.hidden));
+  close.addEventListener("click", () => setOpen(false));
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !panel.hidden) setOpen(false); });
 })();
 </script>
-
 </body>
 </html>
