@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pocket Capture Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F4F7F6; --surface:#FFFFFF; --sunk:#E8EEEC; --line:#D3DDDA;
+  --ink:#14201C; --muted:#5A6B65; --accent:#0E7C66; --accent-soft:#D6EDE7; --warn:#B25E09; --warn-soft:#FBEBD8;
+  --msg:#E3F1EC; --shadow:0 1px 2px rgba(20,32,28,.06),0 8px 24px rgba(20,32,28,.06);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Source Sans 3",ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0E1513; --surface:#15201C; --sunk:#1B2824; --line:#2A3A35;
+    --ink:#E4EEEA; --muted:#94A8A1; --accent:#3CC4A2; --accent-soft:#16392F; --warn:#F0A04B; --warn-soft:#3A2A16;
+    --msg:#1C3A31; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1513; --surface:#15201C; --sunk:#1B2824; --line:#2A3A35;
+  --ink:#E4EEEA; --muted:#94A8A1; --accent:#3CC4A2; --accent-soft:#16392F; --warn:#F0A04B; --warn-soft:#3A2A16;
+  --msg:#1C3A31; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:17px/1.6 var(--body);padding-inline:clamp(16px,4vw,48px);padding-block:40px 64px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:72px}
+h1,h2,h3{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,5vw,56px);font-weight:700;letter-spacing:-.02em}
+h2{font-size:clamp(26px,3vw,34px);font-weight:700}
+h3{font-size:19px;font-weight:700}
+p{margin:0;max-width:65ch}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:19px;color:var(--muted)}
+.mono{font-family:var(--mono);font-size:13px}
+code{font-family:var(--mono);font-size:.85em;background:var(--sunk);padding:1px 6px;border-radius:4px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:40px;align-items:start}
+.hero-copy{display:grid;gap:18px;padding-top:12px}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.fact{font:600 13px/1 var(--mono);padding:8px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--surface)}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px;display:grid;gap:14px}
+.stage-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.controls{display:flex;gap:8px}
+button{font:600 14px/1 var(--body);color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:9px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.lanes{display:grid;gap:10px}
+.lane{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:start;padding:12px;border-radius:12px;border:1px solid transparent;transition:background .35s,border-color .35s,opacity .35s;opacity:.5}
+.lane.on{opacity:1;background:var(--accent-soft);border-color:var(--accent)}
+.lane.done{opacity:.9}
+.lane-name{font:600 12px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.lane.on .lane-name{color:var(--accent)}
+.bubble{background:var(--msg);border-radius:14px 14px 14px 4px;padding:9px 12px;display:inline-block;max-width:100%}
+.bubble.bot{border-radius:14px 14px 4px 14px;background:var(--sunk)}
+.chat{display:grid;gap:6px}
+.chat .right{justify-self:end}
+.file{font:13px/1.55 var(--mono);background:var(--sunk);border-radius:8px;padding:10px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ok{color:var(--accent);font-weight:600}
+.out{display:grid;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 12px/1 var(--mono);padding:6px 8px;border-radius:6px;background:var(--sunk);border:1px solid var(--line)}
+.chip.link{color:var(--accent);border-color:var(--accent)}
+.chip.flag{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.caption{font-size:14px;color:var(--muted)}
+
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;counter-reset:s}
+.step{display:grid;gap:8px;align-content:start;padding-top:14px;border-top:2px solid var(--line)}
+.step::before{counter-increment:s;content:"Step " counter(s);font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.step p{font-size:16px;color:var(--muted)}
+
+/* guardrails */
+.guard{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:40px;align-items:start}
+.rules{display:grid;gap:0;background:var(--warn-soft);border:1px solid var(--warn);border-radius:14px;overflow:hidden}
+.rule{display:grid;gap:4px;padding:16px 18px;border-top:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
+.rule:first-child{border-top:0}
+.rule strong{font-family:var(--display);font-size:17px}
+.rule span{font-size:15px;color:var(--muted)}
+
+/* stack + adapt */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.stack{display:grid;gap:10px}
+.row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding-bottom:10px;border-bottom:1px solid var(--line);font-size:16px}
+.row b{font-family:var(--mono);font-size:13px;font-weight:600;padding-top:3px}
+.uses{display:grid;gap:12px}
+.use{padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.use h3{font-size:17px;margin-bottom:4px}
+.use p{font-size:15px;color:var(--muted)}
+footer{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px;display:grid;gap:6px}
+@media (max-width:860px){
+  .hero,.guard,.split{grid-template-columns:1fr}
+  .lane{grid-template-columns:1fr;gap:6px}
+}
+@media (prefers-reduced-motion:reduce){.lane{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Personal project · my own study workflow</span>
+      <h1>A thought on the ward, a filed note by evening.</h1>
+      <p class="lede">A Telegram bot catches a one-line note from my phone. Google Apps Script commits it to GitHub, my Obsidian vault pulls it, and Claude links it to the right study notes, without inventing a single fact.</p>
+      <div class="facts">
+        <span class="fact">3 free services</span>
+        <span class="fact">0 servers to run</span>
+        <span class="fact">$0 / month</span>
+      </div>
+    </div>
+
+    <div class="stage" aria-label="Animated walkthrough of one note moving through the pipeline">
+      <div class="stage-top">
+        <span class="mono caption" id="stepLabel">Step 1 of 5 · Capture</span>
+        <div class="controls">
+          <button id="prev" type="button" aria-label="Previous step">←</button>
+          <button id="play" type="button" class="primary">Pause</button>
+          <button id="next" type="button" aria-label="Next step">→</button>
+        </div>
+      </div>
+      <div class="lanes">
+        <div class="lane on" data-i="0">
+          <div class="lane-name">Telegram</div>
+          <div class="chat">
+            <span class="bubble right">OP poisoning: atropine vs pralidoxime, which one fixes the weakness?</span>
+            <span class="bubble bot">✅ Note dropped into your Obsidian inbox.</span>
+          </div>
+        </div>
+        <div class="lane" data-i="1">
+          <div class="lane-name">Apps Script</div>
+          <div class="file">doPost(e) → text, timestamp
+→ PUT /repos/…/contents/01_INBOX/Raw_Note_20260924_132147.md
+<span class="ok">201 Created</span></div>
+        </div>
+        <div class="lane" data-i="2">
+          <div class="lane-name">GitHub</div>
+          <div class="file">commit a41f9c2  "capture: Raw_Note_20260924_132147"
+01_INBOX/Raw_Note_20260924_132147.md  +3 lines</div>
+        </div>
+        <div class="lane" data-i="3">
+          <div class="lane-name">Obsidian</div>
+          <div class="file">$ git pull
+<span class="ok">✓</span> 01_INBOX/Raw_Note_20260924_132147.md
+---
+captured: 2026-09-24 13:21:47
+source: telegram
+---
+OP poisoning: atropine vs pralidoxime, which one fixes the weakness?</div>
+        </div>
+        <div class="lane" data-i="4">
+          <div class="lane-name">Claude</div>
+          <div class="out">
+            <span class="bubble right">check my bot inbox</span>
+            <div class="bubble bot">1 new capture: <b>OP poisoning</b>. It sits across two subjects, so I linked it rather than rewriting it:
+              <div class="chips" style="margin-top:8px">
+                <span class="chip link">→ Forensic Medicine / Poisons</span>
+                <span class="chip link">→ Medicine / Toxicology</span>
+                <span class="chip flag">UNVERIFIED capture</span>
+              </div>
+              <div style="margin-top:8px">Revise it now, queue it for spaced revision, or park it?</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="caption">Sample note for illustration; the real inbox holds study notes only, never patient details.</p>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:28px">
+    <div style="display:grid;gap:10px">
+      <span class="eyebrow">How it works</span>
+      <h2>Five small pieces, no server</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Capture</h3><p>A private Telegram bot accepts any text I send. It replies instantly, so I know the note is safe before I pocket the phone.</p></div>
+      <div class="step"><h3>Relay</h3><p>Telegram's webhook calls a Google Apps Script web app. It timestamps the text and writes it as a Markdown file through the GitHub API.</p></div>
+      <div class="step"><h3>Store</h3><p>Every capture is a commit in a private repo, so nothing is lost and every change has history.</p></div>
+      <div class="step"><h3>Sync</h3><p>The Obsidian vault on my PC is the same repo. A <code>git pull</code> brings the raw notes into <code>01_INBOX</code>.</p></div>
+      <div class="step"><h3>Process</h3><p>On <em>"check my bot inbox"</em>, Claude reads the new captures under the vault's written rules, links each one to its related notes, and offers the next study step.</p></div>
+    </div>
+  </section>
+
+  <section class="guard">
+    <div style="display:grid;gap:12px">
+      <span class="eyebrow">Guardrails</span>
+      <h2>Automation that refuses to make things up</h2>
+      <p class="lede">A fast capture is useless if the machine embroiders it. These rules live in the vault's instruction file, and the processing follows them every time.</p>
+    </div>
+    <div class="rules">
+      <div class="rule"><strong>No invented facts</strong><span>A one-line capture stays one line. It is linked to the right notes, never expanded into a "complete" note it doesn't support.</span></div>
+      <div class="rule"><strong>Junk stays put</strong><span>Greetings, <code>/start</code>, and truncated or duplicate captures are skipped and left in the inbox, not turned into notes.</span></div>
+      <div class="rule"><strong>Delete only after it's safe</strong><span>A raw file is removed only once it is faithfully represented somewhere else.</span></div>
+      <div class="rule"><strong>Marked as unverified</strong><span>Captures sit in their own <em>UNVERIFIED</em> file and are never turned into flashcards.</span></div>
+      <div class="rule"><strong>No identifiers</strong><span>Study notes only. Anything that could identify a person is scrubbed.</span></div>
+    </div>
+  </section>
+
+  <section class="split">
+    <div style="display:grid;gap:16px;align-content:start">
+      <span class="eyebrow">Built with</span>
+      <div class="stack">
+        <div class="row"><b>Telegram Bot API</b><span>capture and instant reply, via webhook</span></div>
+        <div class="row"><b>Google Apps Script</b><span>serverless relay: doPost handler, timestamps, GitHub commit</span></div>
+        <div class="row"><b>GitHub REST API</b><span>contents endpoint; every note is a commit</span></div>
+        <div class="row"><b>Git + Obsidian</b><span>vault = repo; pull on demand or on a Windows schedule</span></div>
+        <div class="row"><b>Claude</b><span>linking and triage under a written rule file</span></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:16px;align-content:start">
+      <span class="eyebrow">The same pattern for your business</span>
+      <div class="uses">
+        <div class="use"><h3>Field teams</h3><p>Inspectors or technicians text a finding; it lands as a dated record in a shared sheet or repo, with photos to follow.</p></div>
+        <div class="use"><h3>Sales calls</h3><p>A one-line note after each call becomes a CRM update, tagged to the right deal.</p></div>
+        <div class="use"><h3>Clinics and offices</h3><p>Staff log supply shortages or maintenance issues from their phones; a daily summary goes to the manager.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Personal project by Dhruvin P. · final-year medical student who builds automations · Gujarat, India</span>
+    <span>The note shown is a sample. The pipeline runs on free tiers of Telegram, Google Apps Script and GitHub.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const lanes = [...document.querySelectorAll(".lane")];
+  const names = ["Capture", "Relay", "Store", "Sync", "Process"];
+  const label = document.getElementById("stepLabel");
+  const playBtn = document.getElementById("play");
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let i = 0, timer = null;
+  function show(n) {
+    i = (n + lanes.length) % lanes.length;
+    lanes.forEach((l, k) => { l.classList.toggle("on", k === i); l.classList.toggle("done", k < i); });
+    label.textContent = `Step ${i + 1} of ${lanes.length} · ${names[i]}`;
+  }
+  function play() { stop(); timer = setInterval(() => show(i + 1), 2600); playBtn.textContent = "Pause"; }
+  function stop() { clearInterval(timer); timer = null; playBtn.textContent = "Play"; }
+  playBtn.addEventListener("click", () => (timer ? stop() : play()));
+  document.getElementById("next").addEventListener("click", () => { stop(); show(i + 1); });
+  document.getElementById("prev").addEventListener("click", () => { stop(); show(i - 1); });
+  show(0);
+  if (reduce) stop(); else play();
+})();
+</script>
+
+</body>
+</html>
