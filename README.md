@@ -14,3 +14,4 @@ Requirements: Python 3.10+, `pip install pymupdf openpyxl reportlab`. No API key
 
 How I work: scope in one message → free sample on anything ambiguous → deliver with a short README → you own
 everything (scripts, workbooks, workflows) and can run them without me.
+- [invoice-to-excel](invoice-to-excel/) — 23 invoice PDFs in 3 layouts → Excel with a QA sheet and a live dashboard (duplicates, wrong totals and missing POs caught)
